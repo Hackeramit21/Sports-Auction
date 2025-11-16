@@ -157,3 +157,9 @@ server.listen(8080, '0.0.0.0', () => {
   console.log(`Server running on http://${localIP}:8080`);
   console.log('Access from other devices on the same network using this URL.');
 });
+
+const PORT = process.env.PORT || 8080;
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
