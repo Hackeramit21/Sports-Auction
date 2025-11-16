@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>House Dashboard</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+      background: #f4f7fa;
+      color: #333;
+    }
+    #left {
+      width: 30%;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+      overflow-y: auto;
+    }
+    #center {
+      width: 40%;
+      text-align: center;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    #right {
+      width: 30%;
+      padding: 20px;
+      background: #fff;
+      box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    img {
+      max-width: 100%;
+      height: 300px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    h2 {
+      margin: 10px 0;
+      color: #007bff;
+    }
+    p {
+      margin: 10px 0;
+      font-size: 1.1em;
+    }
+    button {
+      padding: 12px 20px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    button:hover {
+      background: #0056b3;
+      transform: translateY(-2px);
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    #playerList {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: #28a745;
+    }
+    #playerList:hover {
+      background: #218838;
+    }
+    #remaining {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: #ffc107;
+      color: #333;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+    #boughtList {
+      position: absolute;
+      top: 70px;
+      right: 20px;
+      width: 250px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      padding: 10px;
+      display: none;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    #boughtList h4 {
+      margin: 0 0 10px 0;
+      color: #007bff;
+    }
+    #boughtList ul {
+      list-style: none;
+      padding: 0;
+    }
+    #boughtList li {
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+  <div id="left">
+    <h3>Player Bio</h3>
+    <p id="bio"></p>
+  </div>
+  <div id="center">
+    <h2 id="name"></h2>
+    <img id="image" src="">
+    <p>Current Bid: <span id="bid"></span></p>
+    <p>Timer: <span id="timer"></span></p>
+    <button id="bidBtn" onclick="placeBid()">Place Bid</button>
+  </div>
+  <div id="right">
+    <button id="playerList" onclick="showBought()">My Players</button>
+    <div id="boughtList">
+      <h4>My Bought Players</h4>
+      <ul id="boughtUl"></ul>
+    </div>
+    <div id="remaining">Remaining: <span id="remAmt"></span></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const urlParams = new URLSearchParams(window.location.search);
+    const houseId = urlParams.get('house');
+    let lock = 0;
+    let boughtPlayers = [];
+
+    socket.on('auctionStart', (player) => updatePlayer(player));
+    socket.on('nextPlayer', (player) => updatePlayer(player));
+    socket.on('auctionUpdate', (data) => {
+      updatePlayer(data.currentPlayer);
+      document.getElementById('timer').innerText = data.timer;
+      lock = data.lockTimer;
+      document.getElementById('bidBtn').disabled = lock > 0;
+    });
+    socket.on('bidPlaced', (data) => {
+      updatePlayer(data.player);
+      lock = data.lockTimer;
+      document.getElementById('bidBtn').disabled = true;
+    });
+    socket.on('lockUpdate', (lockTime) => {
+      lock = lockTime;
+      if (lock === 0) document.getElementById('bidBtn').disabled = false;
+    });
+    socket.on('timerUpdate', (time) => document.getElementById('timer').innerText = time);
+    socket.on('updateRemaining', (remaining) => {
+      document.getElementById('remAmt').innerText = remaining;
+    });
+    socket.on('playerBought', (data) => {
+      if (data.houseId === houseId) {
+        boughtPlayers = data.boughtPlayers;
+        updateBoughtList();
+      }
+    });
+
+    function updatePlayer(player) {
+      document.getElementById('name').innerText = player.name;
+      document.getElementById('image').src = player.image;
+      document.getElementById('bio').innerText = player.bio;
+      document.getElementById('bid').innerText = player.currentBid;
+      document.getElementById('timer').innerText = 30;
+      document.getElementById('bidBtn').disabled = false;
+    }
+
+    function placeBid() {
+      socket.emit('placeBid');
+    }
+
+    function showBought() {
+      const list = document.getElementById('boughtList');
+      list.style.display = list.style.display === 'block' ? 'none' : 'block';
+      updateBoughtList();
+    }
+
+    function updateBoughtList() {
+      const ul = document.getElementById('boughtUl');
+      ul.innerHTML = boughtPlayers.length > 0 
+        ? boughtPlayers.map(p => `<li>${p.name} - Spent: ${p.spent}</li>`).join('')
+        : '<li>No players bought yet.</li>';
+    }
+
+    // Initial load
+    socket.emit('login', { id: houseId, password: 'pass' + houseId.slice(-1) }); // Auto-login for simplicity
+    socket.on('loginSuccess', (data) => {
+      boughtPlayers = data.house.boughtPlayers;
+      document.getElementById('remAmt').innerText = data.house.remaining;
+      updateBoughtList();
+      // If auction not started yet, updatePlayer will be called via auctionStart
+    });
+  </script>
+</body>
+</html>

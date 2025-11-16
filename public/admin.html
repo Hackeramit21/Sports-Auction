@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f4f7fa;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #007bff;
+      margin-bottom: 30px;
+    }
+    button {
+      display: block;
+      margin: 0 auto 30px;
+      padding: 15px 30px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1em;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    button:hover {
+      background: #0056b3;
+      transform: translateY(-2px);
+    }
+    h3 {
+      color: #495057;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 5px;
+      margin-top: 30px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      background: #fff;
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: box-shadow 0.3s;
+    }
+    li:hover {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <h1>Admin Dashboard</h1>
+  <button onclick="startAuction()">Start Auction</button>
+  <h3>Upcoming Players</h3>
+  <ul id="upcoming"></ul>
+  <h3>Remaining Players</h3>
+  <ul id="remaining"></ul>
+  <h3>Sold Players</h3>
+  <ul id="sold"></ul>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    socket.emit('login', { id: 'admin', password: 'adminpass' });
+    socket.on('adminLoginSuccess', (data) => {
+      updateLists(data.players);
+    });
+    socket.on('nextPlayer', () => {
+      // Refresh lists if needed
+    });
+
+    function startAuction() {
+      socket.emit('startAuction');
+    }
+
+    function updateLists(players) {
+      const upcoming = players.filter(p => p.status === 'upcoming');
+      const remaining = players.filter(p => p.status === 'unsold');
+      const sold = players.filter(p => p.status === 'sold');
+      document.getElementById('upcoming').innerHTML = upcoming.map(p => `<li>${p.name} - Base: ${p.basePrice}</li>`).join('');
+      document.getElementById('remaining').innerHTML = remaining.map(p => `<li>${p.name}</li>`).join('');
+      document.getElementById('sold').innerHTML = sold.map(p => `<li>${p.name} - Sold to ${p.soldTo}</li>`).join('');
+    }
+  </script>
+</body>
+</html>

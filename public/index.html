@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auction Login</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #fff;
+    }
+    .login-container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 15px;
+      padding: 40px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      width: 100%;
+      max-width: 400px;
+    }
+    h1 {
+      margin-bottom: 20px;
+      font-size: 2em;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    input {
+      width: 100%;
+      padding: 15px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      background: rgba(255, 255, 255, 0.9);
+      color: #333;
+    }
+    input::placeholder {
+      color: #666;
+    }
+    button {
+      width: 100%;
+      padding: 15px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1em;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #message {
+      margin-top: 15px;
+      color: #ffcccc;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1>Anual Sports Auction Login</h1>
+    <input id="id" placeholder="ID (house1, house2, etc. or admin)">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <div id="message"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    function login() {
+      const id = document.getElementById('id').value;
+      const password = document.getElementById('password').value;
+      socket.emit('login', { id, password });
+    }
+    socket.on('loginSuccess', (data) => {
+      window.location.href = 'dashboard.html?house=' + data.house.id;
+    });
+    socket.on('adminLoginSuccess', () => {
+      window.location.href = 'admin.html';
+    });
+    socket.on('loginFail', () => {
+      document.getElementById('message').innerText = 'Invalid login';
+    });
+  </script>
+</body>
+</html>
